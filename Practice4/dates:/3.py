@@ -1,7 +1,4 @@
-def d(n):
-    for i in range(n + 1):
-        if i % 3 == 0 and i % 4 == 0:
-            yield i
-n = int(input())
-for num in d(n):
-    print(num)
+from datetime import datetime
+n = datetime.now()
+wm = n.replace(microsecond=0)
+print(wm)

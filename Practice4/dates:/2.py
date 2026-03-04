@@ -1,7 +1,7 @@
-def even(n):
-    for i in range(n + 1):
-        if i % 2 == 0:
-            yield i
-
-n = int(input(4))
-print(",".join(str(num) for num in even(n)))
+from datetime import datetime, timedelta
+t = datetime.now()
+y = t - timedelta(days=1)
+tm = t + timedelta(days=1)
+print("Yesterday:", y)
+print("Today:", t)
+print("Tomorrow:", tm)

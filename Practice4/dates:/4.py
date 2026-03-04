@@ -1,5 +1,6 @@
-def squares(a, b):
-    for i in range(a, b + 1):
-        yield i * i
-for num in squares(2, 6):
-    print(num)
+from datetime import datetime
+d1 = datetime(2026, 2, 20, 10, 0, 0)
+d2 = datetime(2026, 2, 25, 12, 0, 0)
+dif = d2 - d1
+sec = dif.total_seconds()
+print(sec)

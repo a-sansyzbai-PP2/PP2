@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
-cd = datetime.now()
-nd = cd - timedelta(days=5)
-print("5 days ago:", nd)
+def square(n):
+    for i in range(n + 1):
+        yield i * i  #yield-generator
+for num in square(5):
+    print(num)
