@@ -1,5 +1,8 @@
 import psycopg2
-from config import DB_SETTINGS
+from config import load_config
 
-def open_db():
-    return psycopg2.connect(**DB_SETTINGS)
+
+def get_connection():
+    config = load_config()
+    conn = psycopg2.connect(**config)
+    return conn
