@@ -51,21 +51,30 @@ def update_contact(name, new_phone):
         print(f"Error updating contact: {e}")
 
 def query_contacts(search_term, limit=5, page=1):
-    """Queries contacts using a filter for name or phone prefix."""
-    query = "SELECT * FROM phonebook WHERE first_name ILIKE %s OR phone_number LIKE %s;"
+    """Queries contacts with pagination."""
+    
+    offset = (page - 1) * limit
+
+    query = """
+    SELECT * FROM phonebook
+    WHERE first_name ILIKE %s OR phone_number LIKE %s
+    LIMIT %s OFFSET %s;
+    """
+
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (f'%{search_term}%', f'{search_term}%'))
+                cur.execute(query, (f'%{search_term}%', f'{search_term}%', limit, offset))
                 results = cur.fetchall()
+
                 if not results:
-                    print("No contacts found matching the criteria.")
+                    print("No contacts found.")
                 else:
-                    print("\n--- Search Results ---")
+                    print(f"\n--- Page {page} ---")
                     for contact in results:
                         print(f"ID: {contact[0]} | Name: {contact[1]} | Phone: {contact[2]}")
     except Exception as e:
-        print(f"Error querying contacts: {e}")
+        print(f"Error: {e}")
 
 def delete_contact(identifier):
     """Deletes a contact by name or phone number."""
@@ -120,4 +129,7 @@ def main_menu():
 
 if __name__ == "__main__":
     main_menu()
-    
+elif choice == '4':
+    term = input("Enter search term: ")
+    page = int(input("Enter page number: "))
+    query_contacts(term, limit=5, page=page)
