@@ -1,15 +1,10 @@
-from configparser import ConfigParser
+# config.py
+# Database connection configuration
 
-def load_config(filename='database.ini', section='postgresql'):
-    """Reads database configuration from a ini file."""
-    parser = ConfigParser()
-    parser.read(filename)
-    
-    config = {}
-    if parser.has_section(section):
-        params = parser.items(section)
-        for param in params:
-            config[param[0]] = param[1]
-    else:
-        raise Exception(f'Section {section} not found in the {filename} file')
-    return config
+DB_CONFIG = {
+    "host":     "127.0.0.1",
+    "database": "postgres",
+    "user":     "postgres",
+    "password": "137946",
+    "port":     "5432"
+}
