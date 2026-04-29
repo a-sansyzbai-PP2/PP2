@@ -2,7 +2,8 @@
   "players": {
     "фйощд": 1,
     "цвашлктуа": 2,
-    "фйуыв": 3
+    "фйуыв": 3,
+    "aqjol": 4
   },
   "sessions": [
     {
@@ -32,6 +33,20 @@
       "score": 40,
       "level_reached": 1,
       "played_at": "2026-04-28"
+    },
+    {
+      "player_id": 4,
+      "username": "aqjol",
+      "score": 10,
+      "level_reached": 1,
+      "played_at": "2026-04-30"
+    },
+    {
+      "player_id": 4,
+      "username": "aqjol",
+      "score": 970,
+      "level_reached": 4,
+      "played_at": "2026-04-30"
     }
   ]
 }

@@ -19,6 +19,12 @@
   },
   {
     "name": "aqjol",
+    "score": 90,
+    "distance": 163,
+    "coins": 12
+  },
+  {
+    "name": "aqjol",
     "score": 42,
     "distance": 136,
     "coins": 5
@@ -49,14 +55,8 @@
   },
   {
     "name": "aqjol",
-    "score": 20,
-    "distance": 33,
+    "score": 21,
+    "distance": 43,
     "coins": 6
-  },
-  {
-    "name": "aqjol",
-    "score": 12,
-    "distance": 48,
-    "coins": 1
   }
 ]
