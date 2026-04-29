@@ -4,6 +4,19 @@
     "last_name": "Garcia",
     "email": "frank@outlook.com",
     "birthday": "1979-01-30",
+    "group": "Work",
+    "phones": [
+      {
+        "phone": "+17025550106",
+        "type": "mobile"
+      }
+    ]
+  },
+  {
+    "first_name": "Frank",
+    "last_name": "Garcia",
+    "email": "frank@outlook.com",
+    "birthday": "1979-01-30",
     "group": "Other",
     "phones": [
       {
@@ -13,19 +26,6 @@
       {
         "phone": "+17025550107",
         "type": "work"
-      }
-    ]
-  },
-  {
-    "first_name": "Frank",
-    "last_name": "Garcia",
-    "email": "frank@outlook.com",
-    "birthday": "1979-01-30",
-    "group": "family",
-    "phones": [
-      {
-        "phone": "+17025550106",
-        "type": "mobile"
       }
     ]
   },

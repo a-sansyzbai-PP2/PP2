@@ -11,7 +11,7 @@ import sys
 from racer import (
     PlayerCar, EnemyCar, Coin, PowerUp,
     OilSpill, Barrier, NitroStrip,
-    draw_road, draw_hud,
+    draw_road, draw_hud, play_sfx,
     screen, clock,
     SCREEN_WIDTH, SCREEN_HEIGHT, FPS,
     CAR_COLOR_MAP, BLUE,
@@ -33,6 +33,7 @@ DIFF = {
 def play_game(player_name: str, settings: dict) -> None:
     diff      = DIFF[settings.get("difficulty", "normal")]
     car_color = CAR_COLOR_MAP.get(settings.get("car_color", "blue"), BLUE)
+    sound_on  = settings.get("sound", True)
 
     player    = PlayerCar(color=car_color)
     enemies   = []
@@ -128,6 +129,7 @@ def play_game(player_name: str, settings: dict) -> None:
                 coins.remove(c)
                 coin_count += c.value
                 score      += c.value * 2
+                play_sfx("coin", sound_on)
 
         # ── Update power-ups ──────────────────────────────────────────────────
         for p in powerups[:]:
@@ -140,6 +142,7 @@ def play_game(player_name: str, settings: dict) -> None:
                 active_powerup = p.kind
                 powerup_timer  = 4 * FPS  # display for 4 s
                 score += 10
+                play_sfx("powerup", sound_on)
 
         if powerup_timer > 0:
             powerup_timer -= 1
@@ -161,9 +164,11 @@ def play_game(player_name: str, settings: dict) -> None:
                     active_powerup     = "nitro"
                     powerup_timer      = 3 * FPS
                     obstacles.remove(o)
+                    play_sfx("nitro", sound_on)
                 elif isinstance(o, OilSpill):
                     oil_slow_timer = 2 * FPS   # slow for 2 s
                     obstacles.remove(o)
+                    play_sfx("oil", sound_on)
                 elif isinstance(o, Barrier):
                     if player.shield:
                         player.shield = False   # shield absorbs hit
@@ -186,6 +191,7 @@ def play_game(player_name: str, settings: dict) -> None:
                         break
 
         if crashed:
+            play_sfx("crash", sound_on)
             _end_run(player_name, score, distance, coin_count, settings)
             return
 

@@ -1,166 +1,90 @@
 """
-db.py — PostgreSQL persistence via psycopg2.
+db.py — Local JSON persistence (no PostgreSQL required).
 
-Schema (run once on your DB):
+Scores are saved to 'scores.json' in the same folder as the game.
+If the file doesn't exist it will be created automatically.
 
-    CREATE TABLE players (
-        id       SERIAL PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL
-    );
-
-    CREATE TABLE game_sessions (
-        id            SERIAL PRIMARY KEY,
-        player_id     INTEGER REFERENCES players(id),
-        score         INTEGER   NOT NULL,
-        level_reached INTEGER   NOT NULL,
-        played_at     TIMESTAMP DEFAULT NOW()
-    );
-
-Connection settings are read from DB_CONFIG below — edit to match your setup.
-If psycopg2 is not installed or the DB is unreachable, all functions degrade
-gracefully (return [] / None / 0) so the game still runs offline.
+Same API as before:
+    ensure_schema()
+    save_session(username, score, level_reached)
+    personal_best(username) -> int
+    top10() -> list[dict]
 """
 
-import traceback
+import json
+import os
+from datetime import datetime
 
-# ── Connection config — edit these ───────────────────────────────────────────
-DB_CONFIG = {
-    "host":     "localhost",
-    "port":     5432,
-    "dbname":   "snake_game",
-    "user":     "postgres",
-    "password": "postgres",   # ← change to your password
-}
-
-# ── Internal helpers ──────────────────────────────────────────────────────────
-_conn = None   # module-level cached connection
-
-def _get_conn():
-    """Return a live psycopg2 connection, or None if unavailable."""
-    global _conn
-    try:
-        import psycopg2
-        if _conn is None or _conn.closed:
-            _conn = psycopg2.connect(**DB_CONFIG)
-            _conn.autocommit = False
-        return _conn
-    except Exception:
-        return None
+SCORES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scores.json")
 
 
-def _execute(sql: str, params=(), fetch: str = "none"):
-    """
-    Run SQL with params.
-    fetch: 'none' | 'one' | 'all'
-    Returns fetched rows, or None on error.
-    """
-    conn = _get_conn()
-    if conn is None:
-        return None
-    try:
-        cur = conn.cursor()
-        cur.execute(sql, params)
-        result = None
-        if fetch == "one":
-            result = cur.fetchone()
-        elif fetch == "all":
-            result = cur.fetchall()
-        conn.commit()
-        return result
-    except Exception:
-        traceback.print_exc()
+def _load() -> dict:
+    if os.path.exists(SCORES_FILE):
         try:
-            conn.rollback()
+            with open(SCORES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            data.setdefault("players", {})
+            data.setdefault("sessions", [])
+            return data
         except Exception:
             pass
-        return None
+    return {"players": {}, "sessions": []}
 
 
-# ── Schema creation ───────────────────────────────────────────────────────────
+def _save(data: dict) -> None:
+    try:
+        with open(SCORES_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[db] Could not save scores: {e}")
+
+
 def ensure_schema() -> None:
-    """Create tables if they don't exist. Safe to call on every startup."""
-    _execute("""
-        CREATE TABLE IF NOT EXISTS players (
-            id       SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL
-        )
-    """)
-    _execute("""
-        CREATE TABLE IF NOT EXISTS game_sessions (
-            id            SERIAL PRIMARY KEY,
-            player_id     INTEGER REFERENCES players(id),
-            score         INTEGER   NOT NULL,
-            level_reached INTEGER   NOT NULL,
-            played_at     TIMESTAMP DEFAULT NOW()
-        )
-    """)
+    if not os.path.exists(SCORES_FILE):
+        _save({"players": {}, "sessions": []})
 
 
-# ── Player helpers ────────────────────────────────────────────────────────────
 def get_or_create_player(username: str) -> int | None:
-    """Return player id (creates row if username is new)."""
-    row = _execute(
-        "SELECT id FROM players WHERE username = %s",
-        (username,), fetch="one"
-    )
-    if row:
-        return row[0]
-    row = _execute(
-        "INSERT INTO players (username) VALUES (%s) RETURNING id",
-        (username,), fetch="one"
-    )
-    return row[0] if row else None
+    data = _load()
+    if username in data["players"]:
+        return data["players"][username]
+    new_id = len(data["players"]) + 1
+    data["players"][username] = new_id
+    _save(data)
+    return new_id
 
 
-# ── Session helpers ───────────────────────────────────────────────────────────
 def save_session(username: str, score: int, level_reached: int) -> None:
-    """Insert a game session for the given username."""
     pid = get_or_create_player(username)
     if pid is None:
         return
-    _execute(
-        "INSERT INTO game_sessions (player_id, score, level_reached) "
-        "VALUES (%s, %s, %s)",
-        (pid, score, level_reached)
-    )
+    data = _load()
+    data["sessions"].append({
+        "player_id":     pid,
+        "username":      username,
+        "score":         score,
+        "level_reached": level_reached,
+        "played_at":     datetime.now().strftime("%Y-%m-%d"),
+    })
+    _save(data)
 
 
 def personal_best(username: str) -> int:
-    """Return the player's all-time best score, or 0 if none."""
-    row = _execute(
-        """
-        SELECT MAX(gs.score)
-        FROM game_sessions gs
-        JOIN players p ON p.id = gs.player_id
-        WHERE p.username = %s
-        """,
-        (username,), fetch="one"
-    )
-    if row and row[0] is not None:
-        return int(row[0])
-    return 0
+    data = _load()
+    scores = [s["score"] for s in data["sessions"] if s["username"] == username]
+    return max(scores, default=0)
 
 
 def top10() -> list[dict]:
-    """
-    Return the top-10 all-time scores.
-    Each item: {rank, username, score, level, date}
-    """
-    rows = _execute(
-        """
-        SELECT p.username, gs.score, gs.level_reached,
-               TO_CHAR(gs.played_at, 'YYYY-MM-DD') AS played_at
-        FROM game_sessions gs
-        JOIN players p ON p.id = gs.player_id
-        ORDER BY gs.score DESC
-        LIMIT 10
-        """,
-        fetch="all"
-    )
-    if not rows:
-        return []
+    data = _load()
+    sessions = sorted(data["sessions"], key=lambda s: s["score"], reverse=True)
     return [
-        {"rank": i + 1, "username": r[0], "score": r[1],
-         "level": r[2], "date": r[3]}
-        for i, r in enumerate(rows)
+        {
+            "rank":     i + 1,
+            "username": s["username"],
+            "score":    s["score"],
+            "level":    s["level_reached"],
+            "date":     s["played_at"],
+        }
+        for i, s in enumerate(sessions[:10])
     ]

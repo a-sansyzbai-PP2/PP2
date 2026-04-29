@@ -10,6 +10,7 @@ import math
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 pygame.init()
+pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.mixer.init()
 
 SCREEN_WIDTH  = 420
@@ -47,6 +48,58 @@ CAR_COLOR_MAP = {
     "orange": ORANGE,
     "purple": PURPLE,
 }
+
+# ── Sound system ─────────────────────────────────────────────────────────────
+import struct
+import math as _math
+
+def _make_sound(freq=440, duration=0.1, volume=0.3, wave="sine"):
+    """Generate a sound using only stdlib — no numpy needed."""
+    sample_rate = 44100
+    n = int(sample_rate * duration)
+    buf = []
+    for i in range(n):
+        t = i / sample_rate
+        fade = 1.0 - i / n
+        if wave == "sine":
+            v = _math.sin(2 * _math.pi * freq * t)
+        elif wave == "square":
+            v = 1.0 if _math.sin(2 * _math.pi * freq * t) >= 0 else -1.0
+        elif wave == "noise":
+            import random as _r
+            v = _r.uniform(-1, 1)
+        else:
+            v = _math.sin(2 * _math.pi * freq * t)
+        sample = int(v * fade * volume * 32767)
+        sample = max(-32768, min(32767, sample))
+        buf.append(struct.pack("<hh", sample, sample))  # stereo
+    raw = b"".join(buf)
+    return pygame.mixer.Sound(buffer=raw)
+
+try:
+    _SND_COIN    = _make_sound(freq=880,  duration=0.12, volume=0.4, wave="sine")
+    _SND_POWERUP = _make_sound(freq=660,  duration=0.25, volume=0.4, wave="sine")
+    _SND_CRASH   = _make_sound(freq=120,  duration=0.35, volume=0.5, wave="noise")
+    _SND_OIL     = _make_sound(freq=200,  duration=0.20, volume=0.3, wave="square")
+    _SND_NITRO   = _make_sound(freq=1000, duration=0.15, volume=0.3, wave="square")
+    _SOUND_OK = True
+except Exception:
+    _SOUND_OK = False
+
+def play_sfx(name: str, enabled: bool = True):
+    """Play a named sound effect if sound is enabled."""
+    if not enabled or not _SOUND_OK:
+        return
+    sfx = {
+        "coin":    _SND_COIN,
+        "powerup": _SND_POWERUP,
+        "crash":   _SND_CRASH,
+        "oil":     _SND_OIL,
+        "nitro":   _SND_NITRO,
+    }.get(name)
+    if sfx:
+        sfx.play()
+
 
 # Window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))

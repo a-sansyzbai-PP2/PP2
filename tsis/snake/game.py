@@ -24,14 +24,38 @@ from config import (
 )
 
 # ── Fonts (created lazily so this module can be imported before pygame.init) ──
+import os as _os, sys as _sys
+
+def _find_unicode_font(bold=False):
+    """Find a font that supports Cyrillic/Kazakh on Linux, macOS, and Windows."""
+    candidates_linux = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf" if bold else
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeMono.ttf",
+    ]
+    candidates_win = [
+        r"C:\Windows\Fonts\consola.ttf",
+        r"C:\Windows\Fonts\arial.ttf",
+    ]
+    candidates_mac = [
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    ]
+    for path in candidates_linux + candidates_win + candidates_mac:
+        if _os.path.exists(path):
+            return path
+    return None  # fall back to pygame default
+
 _fonts: dict = {}
 
 def _font(key):
     if not _fonts:
-        _fonts["large"]  = pygame.font.SysFont("Consolas", 40, bold=True)
-        _fonts["medium"] = pygame.font.SysFont("Consolas", 24, bold=True)
-        _fonts["small"]  = pygame.font.SysFont("Consolas", 18)
-        _fonts["tiny"]   = pygame.font.SysFont("Consolas", 13)
+        reg  = _find_unicode_font(bold=False)
+        bold = _find_unicode_font(bold=True)
+        _fonts["large"]  = pygame.font.Font(bold, 40)
+        _fonts["medium"] = pygame.font.Font(bold, 24)
+        _fonts["small"]  = pygame.font.Font(reg,  18)
+        _fonts["tiny"]   = pygame.font.Font(reg,  13)
     return _fonts[key]
 
 

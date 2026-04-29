@@ -69,6 +69,54 @@ font_small  = pygame.font.SysFont("Consolas", 18)
 font_tiny   = pygame.font.SysFont("Consolas", 13)
 
 
+# ── Sound system (stdlib only — no numpy) ─────────────────────────────────────
+import struct
+import math as _math
+
+def _make_sound(freq=440, duration=0.1, volume=0.3, wave="sine"):
+    pygame.mixer.pre_init(44100, -16, 2, 512)
+    pygame.mixer.init()
+    sample_rate = 44100
+    n = int(sample_rate * duration)
+    buf = []
+    import random as _r
+    for i in range(n):
+        t    = i / sample_rate
+        fade = 1.0 - i / n
+        if wave == "sine":
+            v = _math.sin(2 * _math.pi * freq * t)
+        elif wave == "square":
+            v = 1.0 if _math.sin(2 * _math.pi * freq * t) >= 0 else -1.0
+        elif wave == "noise":
+            v = _r.uniform(-1, 1)
+        else:
+            v = _math.sin(2 * _math.pi * freq * t)
+        s = max(-32768, min(32767, int(v * fade * volume * 32767)))
+        buf.append(struct.pack("<hh", s, s))
+    return pygame.mixer.Sound(buffer=b"".join(buf))
+
+_SOUND_OK = False
+_SFX: dict = {}
+try:
+    pygame.mixer.pre_init(44100, -16, 2, 512)
+    pygame.mixer.init()
+    _SFX = {
+        "eat":     _make_sound(freq=880,  duration=0.10, volume=0.4, wave="sine"),
+        "bonus":   _make_sound(freq=1100, duration=0.14, volume=0.4, wave="sine"),
+        "poison":  _make_sound(freq=180,  duration=0.20, volume=0.4, wave="square"),
+        "powerup": _make_sound(freq=660,  duration=0.22, volume=0.4, wave="sine"),
+        "die":     _make_sound(freq=120,  duration=0.35, volume=0.5, wave="noise"),
+        "levelup": _make_sound(freq=1320, duration=0.18, volume=0.4, wave="sine"),
+    }
+    _SOUND_OK = True
+except Exception:
+    pass
+
+def play_sfx(name: str, enabled: bool = True):
+    if enabled and _SOUND_OK and name in _SFX:
+        _SFX[name].play()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Generic UI helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -311,9 +359,9 @@ def screen_game_over(username, score, level, pb) -> str:
 #  Main game loop
 # ─────────────────────────────────────────────────────────────────────────────
 def play_game(username: str, settings: dict) -> None:
-    head_col = tuple(settings["snake_color"])
-    # Derive a darker body color
-    body_col = tuple(max(0, c - 60) for c in head_col)
+    head_col  = tuple(settings["snake_color"])
+    body_col  = tuple(max(0, c - 60) for c in head_col)
+    sound_on  = settings.get("sound", True)
 
     pb = db.personal_best(username)
 
@@ -384,6 +432,7 @@ def play_game(username: str, settings: dict) -> None:
         if frame_count % move_delay == 0:
             alive = snake.step(obstacles)
             if not alive:
+                play_sfx("die", sound_on)
                 _end(username, score, level, pb, settings)
                 return
 
@@ -396,6 +445,7 @@ def play_game(username: str, settings: dict) -> None:
                 score      += 10 * level
                 food_eaten += 1
                 normal_food.respawn(occ | {bonus_food.pos, poison_food.pos})
+                play_sfx("eat", sound_on)
                 _level_up_check()
 
             # Eat bonus food (if still alive on field)
@@ -404,20 +454,24 @@ def play_game(username: str, settings: dict) -> None:
                 score      += 30 * level
                 food_eaten += 1
                 bonus_food.respawn(occ | {normal_food.pos, poison_food.pos})
+                play_sfx("bonus", sound_on)
                 _level_up_check()
 
             # Eat poison food
             if head == poison_food.pos:
                 survived = snake.shrink(2)
                 if not survived:
+                    play_sfx("die", sound_on)
                     _end(username, score, level, pb, settings)
                     return
+                play_sfx("poison", sound_on)
                 score = max(0, score - 5)
                 poison_food.respawn(occ | {normal_food.pos, bonus_food.pos})
 
             # Collect power-up
             if powerup and head == powerup.pos:
                 _activate_powerup(powerup.kind)
+                play_sfx("powerup", sound_on)
                 powerup = None
 
         # ── Bonus food timeout ────────────────────────────────────────────────
@@ -445,7 +499,7 @@ def play_game(username: str, settings: dict) -> None:
                 level          += 1
                 base_move_delay = max(2, base_move_delay - 1)
                 move_delay      = base_move_delay
-                # Obstacles from level 3
+                play_sfx("levelup", sound_on)
                 if level >= 3:
                     obstacles = generate_obstacles(level, snake.body)
 
@@ -462,12 +516,13 @@ def play_game(username: str, settings: dict) -> None:
 
 
 def _end(username: str, score: int, level: int, pb: int, settings: dict):
-    """Save to DB then show game-over screen."""
+    """Save to JSON then show game-over screen."""
     db.save_session(username, score, level)
     new_pb = db.personal_best(username) or max(pb, score)
     result = screen_game_over(username, score, level, new_pb)
     if result == "retry":
         play_game(username, settings)
+    # result == "menu" → just return, app() loop handles the rest
 
 
 # ─────────────────────────────────────────────────────────────────────────────

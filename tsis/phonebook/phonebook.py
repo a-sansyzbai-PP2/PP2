@@ -338,16 +338,11 @@ def full_search(conn):
 
 def paginated_browse(conn):
     offset = 0
+    sql = _base_select() + " ORDER BY c.first_name, c.last_name LIMIT %s OFFSET %s;"
     while True:
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM paginated_contacts(%s, %s);", (PAGE_SIZE, offset))
-                rows = cur.fetchall()
-        except psycopg2.errors.UndefinedFunction:
-            conn.rollback()
-            print("  [!] paginated_contacts() function not found.")
-            print("       Make sure Practice 8 procedures are applied first.")
-            return
+        with conn.cursor() as cur:
+            cur.execute(sql, (PAGE_SIZE, offset))
+            rows = cur.fetchall()
 
         page = offset // PAGE_SIZE + 1
         print(f"\n  ── Page {page} (showing {len(rows)} of {PAGE_SIZE} per page) ──")

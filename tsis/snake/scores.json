@@ -1,0 +1,37 @@
+{
+  "players": {
+    "фйощд": 1,
+    "цвашлктуа": 2,
+    "фйуыв": 3
+  },
+  "sessions": [
+    {
+      "player_id": 1,
+      "username": "фйощд",
+      "score": 70,
+      "level_reached": 1,
+      "played_at": "2026-04-27"
+    },
+    {
+      "player_id": 2,
+      "username": "цвашлктуа",
+      "score": 60,
+      "level_reached": 1,
+      "played_at": "2026-04-27"
+    },
+    {
+      "player_id": 3,
+      "username": "фйуыв",
+      "score": 0,
+      "level_reached": 1,
+      "played_at": "2026-04-28"
+    },
+    {
+      "player_id": 3,
+      "username": "фйуыв",
+      "score": 40,
+      "level_reached": 1,
+      "played_at": "2026-04-28"
+    }
+  ]
+}
