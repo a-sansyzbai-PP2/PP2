@@ -47,6 +47,13 @@
       "score": 970,
       "level_reached": 4,
       "played_at": "2026-04-30"
+    },
+    {
+      "player_id": 1,
+      "username": "фйощд",
+      "score": 960,
+      "level_reached": 5,
+      "played_at": "2026-04-30"
     }
   ]
 }
